@@ -4,4 +4,4 @@
 dist
 node_modules
 tmp
-packages-lock.json
+package-lock.json

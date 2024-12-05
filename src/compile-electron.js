@@ -2,13 +2,6 @@ const path = require('node:path')
 const { brotliCompressSync } = require('node:zlib')
 const { spawn } = require('node:child_process')
 const fs = require('node:fs')
-const v8 = require('node:v8')
-
-v8.setFlagsFromString('--no-lazy')
-
-if (Number.parseInt(process.versions.node, 10) >= 12) {
-  v8.setFlagsFromString('--no-flush-bytecode') // Thanks to A-Parser (@a-parser)
-}
 
 /**
  * This function runs the compileCode() function (above) via a child process using Electron as Node

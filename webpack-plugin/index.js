@@ -4,6 +4,7 @@ const fs = require('node:fs')
 const compileFile = require('../src/compile-file.js')
 
 const TMP_LOADER_NAME = '-jsc-loader'
+const LOADER_TMP_DIR = '_jsc-loaders'
 
 module.exports = class TinyBytenodeWebpackPlugin {
   name = 'TinyBytenodeWebpackPlugin'
@@ -17,6 +18,7 @@ module.exports = class TinyBytenodeWebpackPlugin {
    * @param {boolean} [params.transformArrowFunctions]
    * @param {boolean} [params.transformClasses] - Transform classes. Actual for VueJS.
    * @param {boolean} [params.generateLoader]
+   * @param {boolean} [params.excludeFromHTMLPlugin]
    */
   constructor({
     compileAsModule = true,
@@ -25,13 +27,16 @@ module.exports = class TinyBytenodeWebpackPlugin {
     preventSourceMaps = true,
     transformArrowFunctions = true,
     transformClasses = false,
-    generateLoader = true
+    generateLoader = true,
+    excludeFromHTMLPlugin = true
   } = {}) {
     this.compileAsModule = compileAsModule
     this.compileForElectron = compileForElectron
     this.keepSource = keepSource
     this.preventSourceMaps = preventSourceMaps
     this.generateLoader = generateLoader
+    this.excludeFromHTMLPlugin = excludeFromHTMLPlugin
+    this.tmpDirs = new Set()
 
     this.babelPlugins = []
 
@@ -79,7 +84,11 @@ module.exports = class TinyBytenodeWebpackPlugin {
           const loaderEntryName = `${entryName}${TMP_LOADER_NAME}`
           const loaderFileName = `${loaderEntryName}.js` // rename file later
 
-          const loaderFilePath = path.resolve(compiler.outputPath, loaderFileName)
+          const tmpDir = path.resolve(compiler.outputPath, LOADER_TMP_DIR)
+          fs.mkdirSync(path.dirname(tmpDir), { recursive: true })
+          this.tmpDirs.add(tmpDir)
+
+          const loaderFilePath = path.resolve(tmpDir, loaderFileName)
           new webpack.EntryPlugin(context, loaderFilePath, loaderEntryName).apply(compiler)
 
           const code = [
@@ -92,8 +101,6 @@ module.exports = class TinyBytenodeWebpackPlugin {
 
           const entryInfo = (entryMap[entryName] = {
             jscFileName,
-            loaderFileName,
-            loaderFilePath,
             loader: false,
             loaderOutPath: '',
             assetOutPath: '',
@@ -103,6 +110,18 @@ module.exports = class TinyBytenodeWebpackPlugin {
 
           fs.mkdirSync(path.dirname(loaderFilePath), { recursive: true })
           fs.writeFileSync(loaderFilePath, code, 'utf8')
+
+          if (this.excludeFromHTMLPlugin) {
+            const htmlPlugin = compiler.options.plugins.find((p) => p.constructor?.name === 'HtmlWebpackPlugin')
+
+            if (htmlPlugin) {
+              if (!htmlPlugin.options.excludeChunks) {
+                htmlPlugin.options.excludeChunks = []
+              }
+
+              htmlPlugin.options.excludeChunks.push(loaderEntryName)
+            }
+          }
         }
       })
     }
@@ -131,6 +150,14 @@ module.exports = class TinyBytenodeWebpackPlugin {
 
     compiler.hooks.afterEmit.tapPromise(this.name, async (compilation) => {
       const output = compiler.options.output.path
+
+      for (const tmpPath of this.tmpDirs.values()) {
+        try {
+          await fs.promises.rmdir(tmpPath, { recursive: true })
+        } catch {
+          //
+        }
+      }
 
       const electron =
         this.compileForElectron ||

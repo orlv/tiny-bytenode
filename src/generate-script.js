@@ -56,7 +56,7 @@ function fixBytecode(bytecodeBuffer) {
   //   dummyBytecode.subarray(16, 20).copy(bytecodeBuffer, 16)
   //   dummyBytecode.subarray(20, 24).copy(bytecodeBuffer, 20)
   // } else
-  if (version >= 12 && version <= 21) {
+  if (version >= 12 && version <= 23) {
     dummyBytecode.subarray(12, 16).copy(bytecodeBuffer, 12)
   } else {
     dummyBytecode.subarray(12, 16).copy(bytecodeBuffer, 12)

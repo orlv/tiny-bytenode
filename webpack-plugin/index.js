@@ -13,6 +13,7 @@ module.exports = class TinyBytenodeWebpackPlugin {
    * @param {object} [params]
    * @param {boolean} [params.compileAsModule]
    * @param {boolean} [params.compileForElectron]
+   * @param {string} [params.electronPath]
    * @param {boolean} [params.keepSource]
    * @param {boolean} [params.preventSourceMaps]
    * @param {boolean} [params.transformArrowFunctions]
@@ -23,6 +24,7 @@ module.exports = class TinyBytenodeWebpackPlugin {
   constructor({
     compileAsModule = true,
     compileForElectron,
+    electronPath,
     keepSource = false,
     preventSourceMaps = true,
     transformArrowFunctions = true,
@@ -32,6 +34,7 @@ module.exports = class TinyBytenodeWebpackPlugin {
   } = {}) {
     this.compileAsModule = compileAsModule
     this.compileForElectron = compileForElectron
+    this.electronPath = electronPath
     this.keepSource = keepSource
     this.preventSourceMaps = preventSourceMaps
     this.generateLoader = generateLoader
@@ -82,7 +85,7 @@ module.exports = class TinyBytenodeWebpackPlugin {
         for (const entryName of entries) {
           const jscFileName = `./${entryName}.jsc`
           const loaderEntryName = `${entryName}${TMP_LOADER_NAME}`
-          const loaderFileName = `${loaderEntryName}.js` // rename file later
+          const loaderFileName = `${loaderEntryName}.cjs` // rename file later
 
           const tmpDir = path.resolve(compiler.outputPath, LOADER_TMP_DIR)
           fs.mkdirSync(path.dirname(tmpDir), { recursive: true })
@@ -153,7 +156,7 @@ module.exports = class TinyBytenodeWebpackPlugin {
 
       for (const tmpPath of this.tmpDirs.values()) {
         try {
-          await fs.promises.rmdir(tmpPath, { recursive: true })
+          await fs.promises.rm(tmpPath, { recursive: true })
         } catch {
           //
         }
@@ -200,11 +203,16 @@ module.exports = class TinyBytenodeWebpackPlugin {
             await fs.promises.rename(assetOutPath, entry.entryInfo.assetOutPath)
           }
         } else {
+          if (this.electronPath && !fs.existsSync(this.electronPath)) {
+            throw new Error('Electron not found.')
+          }
+
           const res = await compileFile({
             filename: assetOutPath,
             output: path.resolve(output, entry.jscFileName),
             compileAsModule: this.compileAsModule,
-            electron
+            electron,
+            electronPath: this.electronPath
           })
 
           if (res) {

@@ -14,7 +14,8 @@
   },
   "files": [
     "src",
-    "webpack-plugin"
+    "webpack-plugin",
+    "vite-plugin"
   ],
   "author": "",
   "license": "MIT",

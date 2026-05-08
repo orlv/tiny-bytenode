@@ -1,6 +1,6 @@
-const { brotliDecompressSync } = require('node:zlib')
-const compileCode = require('./compile.js')
-const vm = require('node:vm')
+import { brotliDecompressSync } from 'node:zlib'
+import compileCode from './compile.js'
+import vm from 'node:vm'
 
 const MAGIC_NUMBER = Buffer.from([0xde, 0xc0])
 const ZERO_LENGTH_EXTERNAL_REFERENCE_TABLE = Buffer.alloc(2)
@@ -24,7 +24,7 @@ function isBufferV8Bytecode(buffer) {
 /**
  * @param {Buffer} bytecodeBuffer
  * @returns {number}
- * @throws
+ * @throws {Error}
  */
 function readSourceHash(bytecodeBuffer) {
   if (!Buffer.isBuffer(bytecodeBuffer)) {
@@ -51,11 +51,6 @@ function fixBytecode(bytecodeBuffer) {
   const dummyBytecode = compileCode('"ಠ_ಠ"')
   const version = parseFloat(process.version.slice(1, 5))
 
-  // if (process.version.startsWith('v8.8') || process.version.startsWith('v8.9')) {
-  //   // Node is v8.8.x or v8.9.x
-  //   dummyBytecode.subarray(16, 20).copy(bytecodeBuffer, 16)
-  //   dummyBytecode.subarray(20, 24).copy(bytecodeBuffer, 20)
-  // } else
   if (version >= 12 && version <= 23) {
     dummyBytecode.subarray(12, 16).copy(bytecodeBuffer, 12)
   } else {
@@ -68,9 +63,9 @@ function fixBytecode(bytecodeBuffer) {
  * @param {Buffer} cachedData
  * @param {string} [filename]
  * @returns {module:vm.Script}
- * @throws
+ * @throws {Error}
  */
-module.exports = function generateScript(cachedData, filename) {
+export default function generateScript(cachedData, filename) {
   if (!isBufferV8Bytecode(cachedData)) {
     // Try to decompress as Brotli
     // eslint-disable-next-line no-param-reassign

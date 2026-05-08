@@ -1,7 +1,7 @@
-const Module = require('node:module')
-const fs = require('node:fs')
-const path = require('node:path')
-const generateScript = require('./generate-script.js')
+import Module from 'node:module'
+import fs from 'node:fs'
+import path from 'node:path'
+import generateScript from './generate-script.js'
 
 const COMPILED_EXTNAME = '.jsc'
 
@@ -15,7 +15,7 @@ Module._extensions[COMPILED_EXTNAME] = function (fileModule, filename) {
 
   /**
    * @param {string} id
-   * @returns {*}
+   * @returns {object}
    */
   function require(id) {
     return fileModule.require(id)

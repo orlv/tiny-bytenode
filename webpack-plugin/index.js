@@ -1,12 +1,15 @@
-const path = require('node:path')
-const webpack = require('webpack')
-const fs = require('node:fs')
-const compileFile = require('../src/compile-file.js')
+import compileFile from '../src/compile-file.js'
+import path from 'node:path'
+import webpack from 'webpack'
+import fs from 'node:fs'
+import { createRequire } from 'node:module'
+
+const require = createRequire(import.meta.url)
 
 const TMP_LOADER_NAME = '-jsc-loader'
 const LOADER_TMP_DIR = '_jsc-loaders'
 
-module.exports = class TinyBytenodeWebpackPlugin {
+export default class TinyBytenodeWebpackPlugin {
   name = 'TinyBytenodeWebpackPlugin'
 
   /**

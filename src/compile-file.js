@@ -1,8 +1,8 @@
-const fs = require('node:fs')
-const Module = require('node:module')
-const path = require('node:path')
-const compileElectronCode = require('./compile-electron.js')
-const compileCode = require('./compile.js')
+import fs from 'node:fs'
+import Module from 'node:module'
+import path from 'node:path'
+import compileElectronCode from './compile-electron.js'
+import compileCode from './compile.js'
 
 /**
  * Compiles JavaScript file to .jsc file.
@@ -17,7 +17,7 @@ const compileCode = require('./compile.js')
  * @param {string} [params.ext] - Output file extension.
  * @returns {Promise<string>} - A Promise which returns the compiled filename.
  */
-module.exports = async function compileFile({
+export default async function compileFile({
   filename,
   compileAsModule = true,
   compress = false,

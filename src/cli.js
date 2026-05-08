@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-const fs = require('node:fs')
-const path = require('node:path')
-const compileCode = require('./compile.js')
-const compileFile = require('./compile-file.js')
+import fs from 'node:fs'
+import path from 'node:path'
+import compileCode from './compile.js'
+import compileFile from './compile-file.js'
 
 /**
  * @returns {{compress: boolean, noModule: boolean, electron: boolean, electronPath: string, files: string[]}}

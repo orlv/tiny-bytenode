@@ -2,9 +2,9 @@ import compileFile from '../src/compile-file.js'
 import path from 'node:path'
 import webpack from 'webpack'
 import fs from 'node:fs'
-import { createRequire } from 'node:module'
-
-const require = createRequire(import.meta.url)
+import { transformAsync } from '@babel/core'
+import transformArrowFunctionsPlugin from '@babel/plugin-transform-arrow-functions'
+import transformClassesPlugin from '@babel/plugin-transform-classes'
 
 const TMP_LOADER_NAME = '-jsc-loader'
 const LOADER_TMP_DIR = '_jsc-loaders'
@@ -16,6 +16,7 @@ export default class TinyBytenodeWebpackPlugin {
    * @param {object} [params]
    * @param {boolean} [params.compileAsModule]
    * @param {boolean} [params.compileForElectron]
+   * @param {boolean} [params.compileForElectronMain]
    * @param {string} [params.electronPath]
    * @param {boolean} [params.keepSource]
    * @param {boolean} [params.preventSourceMaps]
@@ -27,6 +28,7 @@ export default class TinyBytenodeWebpackPlugin {
   constructor({
     compileAsModule = true,
     compileForElectron,
+    compileForElectronMain = false,
     electronPath,
     keepSource = false,
     preventSourceMaps = true,
@@ -37,6 +39,7 @@ export default class TinyBytenodeWebpackPlugin {
   } = {}) {
     this.compileAsModule = compileAsModule
     this.compileForElectron = compileForElectron
+    this.compileForElectronMain = compileForElectronMain
     this.electronPath = electronPath
     this.keepSource = keepSource
     this.preventSourceMaps = preventSourceMaps
@@ -47,11 +50,11 @@ export default class TinyBytenodeWebpackPlugin {
     this.babelPlugins = []
 
     if (transformArrowFunctions) {
-      this.babelPlugins.push('@babel/plugin-transform-arrow-functions')
+      this.babelPlugins.push(transformArrowFunctionsPlugin)
     }
 
     if (transformClasses) {
-      this.babelPlugins.push('@babel/plugin-transform-classes')
+      this.babelPlugins.push(transformClassesPlugin)
     }
   }
 
@@ -133,18 +136,16 @@ export default class TinyBytenodeWebpackPlugin {
     }
 
     if (this.babelPlugins.length) {
-      const babel = require('@babel/core')
-
       compiler.hooks.compilation.tap(this.name, (compilation) => {
-        compilation.hooks.processAssets.tap(
+        compilation.hooks.processAssets.tapPromise(
           {
             name: this.name,
             stage: webpack.Compilation.PROCESS_ASSETS_STAGE_DERIVED
           },
-          (assets) => {
+          async (assets) => {
             for (const [pathname, source] of Object.entries(assets)) {
               const before = source.buffer().toString()
-              const { code } = babel.transform(before, { plugins: this.babelPlugins })
+              const { code } = await transformAsync(before, { plugins: this.babelPlugins })
               const after = new webpack.sources.RawSource(code || '')
 
               compilation.updateAsset(pathname, after)
@@ -215,6 +216,7 @@ export default class TinyBytenodeWebpackPlugin {
             output: path.resolve(output, entry.jscFileName),
             compileAsModule: this.compileAsModule,
             electron,
+            electronMain: this.compileForElectronMain,
             electronPath: this.electronPath
           })
 

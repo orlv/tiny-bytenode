@@ -1,4 +1,6 @@
-import babel from '@babel/core'
+import { transformAsync } from '@babel/core'
+import transformArrowFunctionsPlugin from '@babel/plugin-transform-arrow-functions'
+import transformClassesPlugin from '@babel/plugin-transform-classes'
 import fs from 'node:fs'
 import path from 'node:path'
 import compileFile from '../src/compile-file.js'
@@ -9,6 +11,7 @@ const virtualLoaderPrefix = '\0tiny-bytenode-vite-loader:'
  * @param {object} [params]
  * @param {boolean} [params.compileAsModule]
  * @param {boolean} [params.compileForElectron]
+ * @param {boolean} [params.compileForElectronMain]
  * @param {string} [params.electronPath]
  * @param {boolean} [params.keepSource]
  * @param {boolean} [params.transformArrowFunctions]
@@ -20,6 +23,7 @@ const virtualLoaderPrefix = '\0tiny-bytenode-vite-loader:'
 export default function TinyBytenodeVitePlugin({
   compileAsModule = true,
   compileForElectron = false,
+  compileForElectronMain = false,
   electronPath = '',
   keepSource = false,
   transformArrowFunctions = true,
@@ -30,6 +34,7 @@ export default function TinyBytenodeVitePlugin({
   const options = {
     compileAsModule,
     compileForElectron,
+    compileForElectronMain,
     electronPath,
     keepSource,
     transformArrowFunctions,
@@ -129,11 +134,11 @@ export default function TinyBytenodeVitePlugin({
       const babelPlugins = []
 
       if (transformArrowFunctions) {
-        babelPlugins.push('@babel/plugin-transform-arrow-functions')
+        babelPlugins.push(transformArrowFunctionsPlugin)
       }
 
       if (transformClasses) {
-        babelPlugins.push('@babel/plugin-transform-classes')
+        babelPlugins.push(transformClassesPlugin)
       }
 
       const transform = !compileAsModule || babelPlugins.length
@@ -146,13 +151,18 @@ export default function TinyBytenodeVitePlugin({
         if (transform) {
           const source = await fs.promises.readFile(entryPath, 'utf8')
 
+          const htmlFileName = chunk.facadeModuleId?.endsWith('.html')
+            ? path.relative(config.root, chunk.facadeModuleId)
+            : 'index.html'
+          const scriptPath = path.relative(path.dirname(htmlFileName), chunk.fileName).split(path.sep).join('/')
+          const scriptUrl = `new URL(${JSON.stringify(scriptPath)}, document.baseURI).href`
           let code = compileAsModule
             ? source
-            : `(async function () { ${source.replaceAll('import.meta.url', 'document.baseURI')} })().catch(function (e) { console.error(e) })`
+            : `(async function () { ${source.replaceAll('import.meta.url', scriptUrl)} })().catch(function (e) { console.error(e) })`
 
           if (babelPlugins.length) {
             code = (
-              await babel.transformAsync(code, {
+              await transformAsync(code, {
                 filename: entryPath,
                 babelrc: false,
                 configFile: false,
@@ -174,6 +184,7 @@ export default function TinyBytenodeVitePlugin({
           output: bytecodePath,
           compileAsModule,
           electron: compileForElectron,
+          electronMain: compileForElectronMain,
           electronPath
         })
 
@@ -255,7 +266,7 @@ function uniqueLoaderName(name, entries) {
   let index = 1
 
   while (entries.some((entry) => entry.loaderName === nextName)) {
-    index += 1
+    index++
     nextName = `${name}-${index}`
   }
 

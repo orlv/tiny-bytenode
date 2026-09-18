@@ -12,7 +12,8 @@ import compileCode from './compile.js'
  * @param {boolean} [params.compileAsModule] - If true, the output will be a commonjs module.
  * @param {boolean} [params.compress] - If true, compress the output bytecode.
  * @param {string} [params.output] - The output filename. Defaults to the same path and name of the original file, but with `.jsc` extension.
- * @param {boolean} [params.electron] - If true, compile code for Electron.
+ * @param {boolean} [params.electron] - If true, compile code in Electron Node mode.
+ * @param {boolean} [params.electronMain] - Compile in the Electron main process (Electron 42+).
  * @param {string} [params.electronPath] - Path to Electron executable.
  * @param {string} [params.ext] - Output file extension.
  * @returns {Promise<string>} - A Promise which returns the compiled filename.
@@ -23,6 +24,7 @@ export default async function compileFile({
   compress = false,
   output = '',
   electron = false,
+  electronMain = false,
   electronPath = '',
   ext = '.jsc'
 }) {
@@ -50,9 +52,10 @@ export default async function compileFile({
     code = Module.wrap(code)
   }
 
-  const bytecodeBuffer = electron
-    ? await compileElectronCode(code, { compress, electronPath })
-    : compileCode(code, compress)
+  const bytecodeBuffer =
+    electron || electronMain
+      ? await compileElectronCode(code, { compress, electronPath, electronMain })
+      : compileCode(code, compress)
 
   await fs.promises.writeFile(output, bytecodeBuffer)
 

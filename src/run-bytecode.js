@@ -1,4 +1,4 @@
-const generateScript = require('./generate-script.js')
+import generateScript from './generate-script.js'
 
 /**
  * Runs v8 bytecode buffer and returns the result.

@@ -51,7 +51,8 @@ function fixBytecode(bytecodeBuffer) {
   const dummyBytecode = compileCode('"ಠ_ಠ"')
   const version = parseFloat(process.version.slice(1, 5))
 
-  if (version >= 12 && version <= 23) {
+  if (version >= 12) {
+    // Preserve the read-only snapshot checksum; overwriting it can turn a mismatch into a V8 crash.
     dummyBytecode.subarray(12, 16).copy(bytecodeBuffer, 12)
   } else {
     dummyBytecode.subarray(12, 16).copy(bytecodeBuffer, 12)

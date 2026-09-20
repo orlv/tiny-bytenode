@@ -15,6 +15,7 @@ const virtualLoaderPrefix = '\0tiny-bytenode-vite-loader:'
  * @param {boolean} [params.compileForElectronRenderer]
  * @param {string} [params.electronPath]
  * @param {boolean} [params.keepSource]
+ * @param {boolean} [params.sourcemap]
  * @param {boolean} [params.transformArrowFunctions]
  * @param {boolean} [params.transformClasses]
  * @param {boolean} [params.generateLoader]
@@ -28,6 +29,7 @@ export default function TinyBytenodeVitePlugin({
   compileForElectronRenderer = false,
   electronPath = '',
   keepSource = false,
+  sourcemap = false,
   transformArrowFunctions = true,
   transformClasses = false,
   generateLoader = true,
@@ -40,6 +42,7 @@ export default function TinyBytenodeVitePlugin({
     compileForElectronRenderer,
     electronPath,
     keepSource,
+    sourcemap,
     transformArrowFunctions,
     transformClasses,
     generateLoader,
@@ -53,7 +56,7 @@ export default function TinyBytenodeVitePlugin({
     name: 'tiny-bytenode-vite',
     apply: 'build',
     config() {
-      return { build: { sourcemap: false } }
+      return { build: { sourcemap } }
     },
     configResolved(resolvedConfig) {
       config = resolvedConfig
@@ -301,7 +304,6 @@ async function moveLoaderToEntry(outputDir, bundle, chunk, loaderEntries) {
   const loaderPath = path.join(outputDir, chunk.fileName)
 
   await fs.promises.rename(path.join(outputDir, loaderChunk.fileName), loaderPath)
-  await fs.promises.rm(path.join(outputDir, `${loaderChunk.fileName}.map`), { force: true })
 
   return loaderPath
 }

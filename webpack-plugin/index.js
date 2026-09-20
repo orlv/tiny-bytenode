@@ -20,11 +20,11 @@ export default class TinyBytenodeWebpackPlugin {
    * @param {boolean} [params.compileForElectronRenderer]
    * @param {string} [params.electronPath]
    * @param {boolean} [params.keepSource]
-   * @param {boolean} [params.preventSourceMaps]
+   * @param {boolean} [params.sourcemap]
    * @param {boolean} [params.transformArrowFunctions]
    * @param {boolean} [params.transformClasses] - Transform classes. Actual for VueJS.
    * @param {boolean} [params.generateLoader]
-   * @param {boolean} [params.excludeFromHTMLPlugin]
+   * @param {boolean} [params.excludeFromHTML]
    */
   constructor({
     compileAsModule = true,
@@ -33,11 +33,11 @@ export default class TinyBytenodeWebpackPlugin {
     compileForElectronRenderer = false,
     electronPath,
     keepSource = false,
-    preventSourceMaps = true,
+    sourcemap = false,
     transformArrowFunctions = true,
     transformClasses = false,
     generateLoader = true,
-    excludeFromHTMLPlugin = true
+    excludeFromHTML = true
   } = {}) {
     this.compileAsModule = compileAsModule
     this.compileForElectron = compileForElectron
@@ -45,9 +45,9 @@ export default class TinyBytenodeWebpackPlugin {
     this.compileForElectronRenderer = compileForElectronRenderer
     this.electronPath = electronPath
     this.keepSource = keepSource
-    this.preventSourceMaps = preventSourceMaps
+    this.sourcemap = sourcemap
     this.generateLoader = generateLoader
-    this.excludeFromHTMLPlugin = excludeFromHTMLPlugin
+    this.excludeFromHTML = excludeFromHTML
     this.tmpDirs = new Set()
 
     this.babelPlugins = []
@@ -62,9 +62,7 @@ export default class TinyBytenodeWebpackPlugin {
   }
 
   apply(compiler) {
-    if (this.preventSourceMaps) {
-      compiler.options.devtool = false
-    }
+    compiler.options.devtool = this.sourcemap ? compiler.options.devtool || 'source-map' : false
 
     const entryMap = {}
 
@@ -123,7 +121,7 @@ export default class TinyBytenodeWebpackPlugin {
           fs.mkdirSync(path.dirname(loaderFilePath), { recursive: true })
           fs.writeFileSync(loaderFilePath, code, 'utf8')
 
-          if (this.excludeFromHTMLPlugin) {
+          if (this.excludeFromHTML) {
             const htmlPlugin = compiler.options.plugins.find((p) => p.constructor?.name === 'HtmlWebpackPlugin')
 
             if (htmlPlugin) {
@@ -148,8 +146,15 @@ export default class TinyBytenodeWebpackPlugin {
           async (assets) => {
             for (const [pathname, source] of Object.entries(assets)) {
               const before = source.buffer().toString()
-              const { code } = await transformAsync(before, { plugins: this.babelPlugins })
-              const after = new webpack.sources.RawSource(code || '')
+              const { code, map } = await transformAsync(before, {
+                plugins: this.babelPlugins,
+                sourceMaps: this.sourcemap,
+                sourceFileName: pathname,
+                inputSourceMap: this.sourcemap ? source.map() || undefined : undefined
+              })
+              const after = map
+                ? new webpack.sources.SourceMapSource(code || '', pathname, map)
+                : new webpack.sources.RawSource(code || '')
 
               compilation.updateAsset(pathname, after)
             }

@@ -19,6 +19,29 @@ const root = fileURLToPath(new URL('..', import.meta.url))
 const cwd = process.cwd()
 let directory
 
+/**
+ * @param {string} outDir
+ * @param {string} entry
+ * @param {boolean} enabled
+ */
+async function assertSourceMaps(outDir, entry, enabled) {
+  const files = await fs.readdir(outDir)
+  assert.equal(
+    files.some((file) => file.endsWith('.map')),
+    enabled
+  )
+  const loader = await fs.readFile(path.join(outDir, entry), 'utf8')
+  const reference = loader.match(/^\/\/# sourceMappingURL=(\S+)/m)
+  assert.equal(Boolean(reference), enabled)
+
+  if (enabled) {
+    const map = JSON.parse(await fs.readFile(path.join(outDir, reference[1]), 'utf8'))
+    assert.equal(map.version, 3)
+    assert.ok(map.sources.length > 0)
+    assert.ok(map.mappings.length > 0)
+  }
+}
+
 before(async () => {
   await fs.mkdir(path.join(root, 'dist'), { recursive: true })
   directory = await fs.mkdtemp(path.join(root, 'dist/bytecode-test-'))
@@ -98,11 +121,12 @@ it('CLI returns a failure status for invalid source and missing files', async ()
   assert.equal(runBytecode(result.stdout), 42)
 })
 
-it('builds TypeScript with the Vite plugin and executes its generated loader', async () => {
-  const filename = path.join(directory, 'entry.ts')
-  await fs.writeFile(
-    filename,
-    `
+for (const sourcemap of [false, true]) {
+  it(`builds TypeScript with Vite and sourcemap=${sourcemap}`, async () => {
+    const filename = path.join(directory, 'entry.ts')
+    await fs.writeFile(
+      filename,
+      `
     type Result = { value: number }
     enum Offset { Base = 40 }
     class Value { read(): number { return Offset.Base + 2 } }
@@ -110,59 +134,69 @@ it('builds TypeScript with the Vite plugin and executes its generated loader', a
     const result: Result = { value: read() }
     console.log(JSON.stringify(result))
   `
-  )
-  const outDir = path.join(directory, 'vite')
-  await build({
-    root: directory,
-    configFile: false,
-    logLevel: 'silent',
-    resolve: { alias: { '@orlv/tiny-bytenode': root } },
-    build: {
-      outDir,
-      lib: { entry: filename, formats: ['cjs'], fileName: () => 'entry.cjs' },
-      rollupOptions: { external: [...builtinModules, ...builtinModules.map((name) => `node:${name}`)] }
-    },
-    plugins: [TinyBytenodeVitePlugin({ transformClasses: true })]
-  })
-  const res = spawnSync(process.execPath, [path.join(outDir, 'entry.cjs')], { encoding: 'utf8', timeout: 10000 })
-  assert.equal(res.error, undefined)
-  assert.equal(res.status, 0, res.stderr)
-  assert.deepEqual(JSON.parse(res.stdout), { value: 42 })
-  assert.ok((await fs.stat(path.join(outDir, 'entry.jsc'))).size > 0)
-})
-
-it('builds with the Webpack plugin and executes its generated loader with console colors enabled', async () => {
-  const filename = path.join(directory, 'webpack-entry.cjs')
-  await fs.writeFile(
-    filename,
-    'class Value { read() { return 42 } }; const read = () => new Value().read(); process.stdout.write(JSON.stringify(read()))'
-  )
-  const outDir = path.join(directory, 'webpack')
-  await new Promise((resolve, reject) => {
-    webpack(
-      {
-        mode: 'production',
-        target: 'node',
-        entry: { main: filename },
-        output: { path: outDir, filename: '[name].cjs' },
-        resolve: { alias: { '@orlv/tiny-bytenode': root } },
-        plugins: [new TinyBytenodeWebpackPlugin({ transformClasses: true })]
-      },
-      (error, res) => {
-        if (error || res.hasErrors()) {
-          reject(error || new Error(res.toString({ all: false, errors: true })))
-        } else {
-          resolve()
-        }
-      }
     )
+    const outDir = path.join(directory, `vite-${sourcemap}`)
+    await build({
+      root: directory,
+      configFile: false,
+      logLevel: 'silent',
+      resolve: { alias: { '@orlv/tiny-bytenode': root } },
+      build: {
+        outDir,
+        sourcemap: !sourcemap,
+        lib: { entry: filename, formats: ['cjs'], fileName: () => 'entry.cjs' },
+        rollupOptions: { external: [...builtinModules, ...builtinModules.map((name) => `node:${name}`)] }
+      },
+      plugins: [TinyBytenodeVitePlugin({ transformClasses: true, sourcemap })]
+    })
+    const res = spawnSync(process.execPath, [path.join(outDir, 'entry.cjs')], { encoding: 'utf8', timeout: 10000 })
+    assert.equal(res.error, undefined)
+    assert.equal(res.status, 0, res.stderr)
+    assert.deepEqual(JSON.parse(res.stdout), { value: 42 })
+    assert.ok((await fs.stat(path.join(outDir, 'entry.jsc'))).size > 0)
+    await assertSourceMaps(outDir, 'entry.cjs', sourcemap)
   })
-  const res = spawnSync(process.execPath, [path.join(outDir, 'main.cjs')], {
-    env: { ...process.env, FORCE_COLOR: '1' },
-    encoding: 'utf8',
-    timeout: 10000
+}
+
+for (const [label, options, sourcemap] of [
+  ['defaults', {}, false],
+  ['sourcemap enabled', { sourcemap: true }, true]
+]) {
+  it(`builds with Webpack, ${label}, and executes its loader`, async () => {
+    const filename = path.join(directory, 'webpack-entry.cjs')
+    await fs.writeFile(
+      filename,
+      'class Value { read() { return 42 } }; const read = () => new Value().read(); process.stdout.write(JSON.stringify(read()))'
+    )
+    const outDir = path.join(directory, `webpack-${label}`)
+    await new Promise((resolve, reject) => {
+      webpack(
+        {
+          mode: 'production',
+          target: 'node',
+          devtool: sourcemap ? undefined : 'source-map',
+          entry: { main: filename },
+          output: { path: outDir, filename: '[name].cjs' },
+          resolve: { alias: { '@orlv/tiny-bytenode': root } },
+          plugins: [new TinyBytenodeWebpackPlugin({ transformClasses: true, ...options })]
+        },
+        (error, res) => {
+          if (error || res.hasErrors()) {
+            reject(error || new Error(res.toString({ all: false, errors: true })))
+          } else {
+            resolve()
+          }
+        }
+      )
+    })
+    const res = spawnSync(process.execPath, [path.join(outDir, 'main.cjs')], {
+      env: { ...process.env, FORCE_COLOR: '1' },
+      encoding: 'utf8',
+      timeout: 10000
+    })
+    assert.equal(res.error, undefined)
+    assert.equal(res.status, 0, res.stderr)
+    assert.equal(res.stdout, '42')
+    await assertSourceMaps(outDir, 'main.cjs', sourcemap)
   })
-  assert.equal(res.error, undefined)
-  assert.equal(res.status, 0, res.stderr)
-  assert.equal(res.stdout, '42')
-})
+}

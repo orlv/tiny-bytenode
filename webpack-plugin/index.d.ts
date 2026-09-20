@@ -8,11 +8,11 @@ export default class TinyBytenodeWebpackPlugin {
     compileForElectronRenderer?: boolean
     electronPath?: string
     keepSource?: boolean
-    preventSourceMaps?: boolean
+    sourcemap?: boolean
     transformArrowFunctions?: boolean
     transformClasses?: boolean
     generateLoader?: boolean
-    excludeFromHTMLPlugin?: boolean
+    excludeFromHTML?: boolean
   })
   apply(compiler: Compiler): void
 }

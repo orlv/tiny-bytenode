@@ -135,6 +135,7 @@ async function compileFiles({ files, noModule, compress, electron, electronPath 
         process.stdout.write(bytecode)
       } catch (e) {
         console.error(e)
+        process.exitCode = 1
       }
     })
   } else {
@@ -156,6 +157,7 @@ async function compileFiles({ files, noModule, compress, electron, electronPath 
         })
       } catch (e) {
         console.error(e)
+        process.exitCode = 1
       }
     }
   }
@@ -163,4 +165,7 @@ async function compileFiles({ files, noModule, compress, electron, electronPath 
 
 const options = parseArgs()
 
-compileFiles(options).catch(console.error)
+compileFiles(options).catch((error) => {
+  console.error(error)
+  process.exitCode = 1
+})

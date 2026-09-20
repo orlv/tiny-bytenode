@@ -77,6 +77,27 @@ it('supports a custom bytecode extension', async () => {
   assert.equal(runBytecode(await fs.readFile(output)), 42)
 })
 
+it('CLI returns a failure status for invalid source and missing files', async () => {
+  const cli = path.join(root, 'src/cli.js')
+  const badFile = path.join(directory, 'invalid.js')
+  await fs.writeFile(badFile, 'const value = ;')
+
+  for (const args of [[badFile], ['--no-module'], [path.join(directory, 'missing.js')]]) {
+    const result = spawnSync(process.execPath, [cli, ...args], {
+      input: 'const value = ;',
+      encoding: 'utf8',
+      timeout: 10000
+    })
+    assert.equal(result.error, undefined)
+    assert.equal(result.status, 1, result.stderr)
+    assert.match(result.stderr, /SyntaxError|cannot find file/)
+  }
+
+  const result = spawnSync(process.execPath, [cli, '--no-module'], { input: '42', timeout: 10000 })
+  assert.equal(result.status, 0, result.stderr.toString())
+  assert.equal(runBytecode(result.stdout), 42)
+})
+
 it('builds TypeScript with the Vite plugin and executes its generated loader', async () => {
   const filename = path.join(directory, 'entry.ts')
   await fs.writeFile(

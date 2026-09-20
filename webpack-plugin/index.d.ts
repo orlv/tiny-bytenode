@@ -5,6 +5,7 @@ export default class TinyBytenodeWebpackPlugin {
     compileAsModule?: boolean
     compileForElectron?: boolean
     compileForElectronMain?: boolean
+    compileForElectronRenderer?: boolean
     electronPath?: string
     keepSource?: boolean
     preventSourceMaps?: boolean

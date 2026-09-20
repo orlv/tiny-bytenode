@@ -14,6 +14,7 @@ import compileCode from './compile.js'
  * @param {string} [params.output] - The output filename. Defaults to the same path and name of the original file, but with `.jsc` extension.
  * @param {boolean} [params.electron] - If true, compile code in Electron Node mode.
  * @param {boolean} [params.electronMain] - Compile in the Electron main process (Electron 42+).
+ * @param {boolean} [params.electronRenderer] - Compile for Electron renderer/preload (required on Electron 43.5.1+).
  * @param {string} [params.electronPath] - Path to Electron executable.
  * @param {string} [params.ext] - Output file extension.
  * @returns {Promise<string>} - A Promise which returns the compiled filename.
@@ -25,6 +26,7 @@ export default async function compileFile({
   output = '',
   electron = false,
   electronMain = false,
+  electronRenderer = false,
   electronPath = '',
   ext = '.jsc'
 }) {
@@ -53,8 +55,8 @@ export default async function compileFile({
   }
 
   const bytecodeBuffer =
-    electron || electronMain
-      ? await compileElectronCode(code, { compress, electronPath, electronMain })
+    electron || electronMain || electronRenderer
+      ? await compileElectronCode(code, { compress, electronPath, electronMain, electronRenderer })
       : compileCode(code, compress)
 
   await fs.promises.writeFile(output, bytecodeBuffer)

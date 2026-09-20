@@ -12,6 +12,7 @@ const virtualLoaderPrefix = '\0tiny-bytenode-vite-loader:'
  * @param {boolean} [params.compileAsModule]
  * @param {boolean} [params.compileForElectron]
  * @param {boolean} [params.compileForElectronMain]
+ * @param {boolean} [params.compileForElectronRenderer]
  * @param {string} [params.electronPath]
  * @param {boolean} [params.keepSource]
  * @param {boolean} [params.transformArrowFunctions]
@@ -24,6 +25,7 @@ export default function TinyBytenodeVitePlugin({
   compileAsModule = true,
   compileForElectron = false,
   compileForElectronMain = false,
+  compileForElectronRenderer = false,
   electronPath = '',
   keepSource = false,
   transformArrowFunctions = true,
@@ -35,6 +37,7 @@ export default function TinyBytenodeVitePlugin({
     compileAsModule,
     compileForElectron,
     compileForElectronMain,
+    compileForElectronRenderer,
     electronPath,
     keepSource,
     transformArrowFunctions,
@@ -185,6 +188,7 @@ export default function TinyBytenodeVitePlugin({
           compileAsModule,
           electron: compileForElectron,
           electronMain: compileForElectronMain,
+          electronRenderer: compileForElectronRenderer,
           electronPath
         })
 

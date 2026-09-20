@@ -17,6 +17,7 @@ export default class TinyBytenodeWebpackPlugin {
    * @param {boolean} [params.compileAsModule]
    * @param {boolean} [params.compileForElectron]
    * @param {boolean} [params.compileForElectronMain]
+   * @param {boolean} [params.compileForElectronRenderer]
    * @param {string} [params.electronPath]
    * @param {boolean} [params.keepSource]
    * @param {boolean} [params.preventSourceMaps]
@@ -29,6 +30,7 @@ export default class TinyBytenodeWebpackPlugin {
     compileAsModule = true,
     compileForElectron,
     compileForElectronMain = false,
+    compileForElectronRenderer = false,
     electronPath,
     keepSource = false,
     preventSourceMaps = true,
@@ -40,6 +42,7 @@ export default class TinyBytenodeWebpackPlugin {
     this.compileAsModule = compileAsModule
     this.compileForElectron = compileForElectron
     this.compileForElectronMain = compileForElectronMain
+    this.compileForElectronRenderer = compileForElectronRenderer
     this.electronPath = electronPath
     this.keepSource = keepSource
     this.preventSourceMaps = preventSourceMaps
@@ -217,6 +220,7 @@ export default class TinyBytenodeWebpackPlugin {
             compileAsModule: this.compileAsModule,
             electron,
             electronMain: this.compileForElectronMain,
+            electronRenderer: this.compileForElectronRenderer,
             electronPath: this.electronPath
           })
 

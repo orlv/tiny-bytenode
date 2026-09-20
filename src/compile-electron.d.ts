@@ -5,6 +5,7 @@ export default function compileElectronCode(
   options?: {
     electronPath?: string
     electronMain?: boolean
+    electronRenderer?: boolean
     compress?: boolean
   }
 ): Promise<Buffer>

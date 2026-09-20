@@ -16,7 +16,8 @@ export default {
     TinyBytenodeVitePlugin({
       compileAsModule: true, // Wrap as a CommonJS module.
       compileForElectronMain: true, // Electron main process (default: false).
-      compileForElectron: false, // Electron Node mode, used for renderer/preload.
+      compileForElectron: false, // Electron Node mode.
+      compileForElectronRenderer: false, // Electron renderer/preload (default: false).
       // electronPath: '/path/to/electron', // Optional; defaults to require('electron').
       keepSource: false, // Keep the generated JavaScript alongside bytecode.
       transformArrowFunctions: true, // Convert arrow functions to regular functions.
@@ -38,7 +39,7 @@ export default {
   plugins: [
     TinyBytenodeVitePlugin({
       compileAsModule: false,
-      compileForElectron: true,
+      compileForElectronRenderer: true,
       electronPath: createRequire(import.meta.url)('electron'),
       generateLoader: false
     })
@@ -46,9 +47,11 @@ export default {
 }
 ```
 
-All options are optional. The first example enables main-process compilation; the other values shown are defaults. For a renderer script, use `compileAsModule: false`, `compileForElectronMain: false`, `compileForElectron: true` and `generateLoader: false`.
+All options are optional. The first example enables main-process compilation; the other values shown are defaults. For a renderer script, use `compileAsModule: false`, `compileForElectronMain: false`, `compileForElectronRenderer: true` and `generateLoader: false`.
 
-`electronPath` is only an override. Without it, the library resolves the installed `electron` package. With a local `link`, this may be the library's own Electron; specify the application's executable if they differ. Compilation must use the application's Electron version, platform and architecture. Main-process compilation requires a graphical session (use `xvfb-run -a` on headless Linux).
+`electronPath` is only an override. Without it, the library resolves the installed `electron` package. With a local `link`, this may be the library's own Electron; specify the application's executable if they differ. Compilation must use the application's Electron version, platform and architecture. Main-process and renderer compilation require a graphical session (use `xvfb-run -a` on headless Linux).
+
+`compileForElectronRenderer` compiles inside a hidden window's preload. Use it for renderer/preload bytecode on Electron 43.5.1+. For a CommonJS preload, keep `compileAsModule: true`. Do not combine `compileForElectronMain` and `compileForElectronRenderer`. The standalone APIs use the corresponding `electronMain` and `electronRenderer` options.
 
 For Webpack, use `new TinyBytenodeWebpackPlugin(options)` from `@orlv/tiny-bytenode/webpack-plugin/index.js`. It uses `excludeFromHTMLPlugin` instead of `excludeFromHTML` and also supports `preventSourceMaps`; both default to `true`. If `compileForElectron` is omitted, it is inferred from Webpack's target.
 

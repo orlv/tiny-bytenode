@@ -4,6 +4,7 @@ export default function TinyBytenodeVitePlugin(options?: {
   compileAsModule?: boolean
   compileForElectron?: boolean
   compileForElectronMain?: boolean
+  compileForElectronRenderer?: boolean
   electronPath?: string
   keepSource?: boolean
   transformArrowFunctions?: boolean

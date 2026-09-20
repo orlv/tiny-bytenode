@@ -5,6 +5,7 @@ export default function compileFile(options: {
   output?: string
   electron?: boolean
   electronMain?: boolean
+  electronRenderer?: boolean
   electronPath?: string
   ext?: string
 }): Promise<string>
